@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="explorer-container">
+    <!-- Header similar to Dashboard -->
+    <div class="explorer-header">
+        <div class="breadcrumbs">
+            <a href="{{ url_for('main.index') }}">Home</a> <span class="separator">/</span> <span>Settings</span>
+        </div>
+        <div class="search-box"></div> <!-- Spacer to match layout -->
+    </div>
+
+    <div class="actions-bar">
+        <h2 style="margin: 0; font-weight: 600;">System Settings</h2>
+    </div>
+
+    <!-- Settings Layout -->
+    <div style="display: flex; height: calc(100vh - 180px); gap: 20px; padding: 20px;">
+        <!-- Left Side: Settings Navigation -->
+        <div
+            style="width: 250px; background: var(--bg-secondary); border-radius: 12px; padding: 1rem; border: 1px solid var(--border);">
+            <ul class="nav-links" style="list-style: none; padding: 0;">
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="javascript:void(0)" onclick="showTab('network')" id="tab-network" class="tab-btn active"
+                        style="width: 100%; text-align: left; justify-content: flex-start;">
+                        <i class="fas fa-network-wired" style="margin-right: 10px;"></i> Network
+                    </a>
+                </li>
+                <li style="margin-bottom: 0.5rem;">
+                    <a href="javascript:void(0)" onclick="showTab('general')" id="tab-general" class="tab-btn"
+                        style="width: 100%; text-align: left; justify-content: flex-start;">
+                        <i class="fas fa-user-cog" style="margin-right: 10px;"></i> General
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Right Side: Content -->
+        <div style="flex: 1; overflow-y: auto;">
+            <!-- Network Settings (SMTP) -->
+            <div id="section-network" class="settings-section active">
+                <div class="form-card" style="max-width: 100%; margin: 0;">
+                    <h3 style="margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem;">
+                        <i class="fas fa-envelope"></i> SMTP Configuration
+                    </h3>
+                    <p style="margin-bottom:1.5rem; color:var(--text-secondary); font-size:0.9rem;">
+                        Configure external network credentials for email notifications.
+                    </p>
+
+                    <form method="POST">
+                        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <div class="form-group">
+                                <label for="smtp_server">SMTP Server</label>
+                                <input type="text" id="smtp_server" name="smtp_server" class="form-control"
+                                    value="{{ settings.smtp_server or '' }}" placeholder="e.g., smtp.gmail.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp_port">SMTP Port</label>
+                                <input type="text" id="smtp_port" name="smtp_port" class="form-control"
+                                    value="{{ settings.smtp_port or '' }}" placeholder="e.g., 587">
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp_user">SMTP User/Email</label>
+                                <input type="text" id="smtp_user" name="smtp_user" class="form-control"
+                                    value="{{ settings.smtp_user or '' }}" placeholder="email@example.com">
+                            </div>
+                            <div class="form-group">
+                                <label for="smtp_password">SMTP Password</label>
+                                <input type="password" id="smtp_password" name="smtp_password" class="form-control"
+                                    value="{{ settings.smtp_password or '' }}">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                            <button type="submit" class="btn btn-primary" style="width: auto;">
+                                <i class="fas fa-save"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- General Settings (Folder Permissions) -->
+            <div id="section-general" class="settings-section">
+                <div class="form-card" style="max-width: 100%; margin: 0;">
+                    <h3 style="margin-bottom:1rem; border-bottom:1px solid var(--border); padding-bottom:0.5rem;">
+                        <i class="fas fa-folder-lock"></i> Folder Permissions
+                    </h3>
+                    <p style="margin-bottom:1.5rem; color:var(--text-secondary); font-size:0.9rem;">
+                        Manage granular folder access for users and guests.
+                    </p>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Role</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users %}
+                            <tr>
+                                <td>{{ user.username }}</td>
+                                <td><span class="role-badge role-{{ user.role }}">{{ user.role|title }}</span></td>
+                                <td style="text-align: right;">
+                                    <button
+                                        onclick="openPermissionModal(this.dataset.id, this.dataset.username, JSON.parse(this.dataset.perms))"
+                                        data-id="{{ user.id }}" data-username="{{ user.username }}"
+                                        data-perms='{{ permissions[user.id]|tojson if user.id in permissions else "[]" }}'
+                                        class="btn-sm btn-primary" style="display:inline-block">Manage Access</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Permissions Modal -->
+<div id="permissionModal" class="modal">
+    <div class="modal-content" style="width: 500px; max-width: 90%;">
+        <h2 id="permModalTitle">Folder Access</h2>
+        <form action="{{ url_for('admin.update_folder_permissions') }}" method="POST">
+            <input type="hidden" id="perm_user_id" name="user_id">
+            <div class="permissions-list" style="max-height: 400px; overflow-y: auto; margin-top: 1rem;">
+                {% for folder in folders %}
+                <label
+                    style="display: flex; align-items: center; padding: 0.75rem; border-bottom: 1px solid var(--border); cursor: pointer;">
+                    <input type="checkbox" name="folders" value="{{ folder.id }}" id="chk-folder-{{ folder.id }}"
+                        style="margin-right: 15px;">
+                    <div>
+                        <div style="font-weight: 500;">{{ folder.name }}</div>
+                        {% if folder.is_training %}
+                        <span class="badge" style="font-size: 0.65rem;">Training Track</span>
+                        {% endif %}
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+            <div class="modal-actions" style="margin-top: 2rem;">
+                <button type="button" onclick="closePermissionModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Update Permissions</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .settings-section {
+        display: none;
+    }
+
+    .settings-section.active {
+        display: block;
+    }
+
+    .tab-btn {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+
+    .tab-btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+    }
+
+    .tab-btn.active {
+        background: var(--accent) !important;
+        color: white !important;
+    }
+
+    .role-badge {
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .role-admin {
+        background: rgba(56, 189, 248, 0.2);
+        color: var(--accent);
+    }
+
+    .role-user {
+        background: rgba(34, 197, 94, 0.2);
+        color: var(--success);
+    }
+
+    .role-guest {
+        background: rgba(234, 179, 8, 0.2);
+        color: #eab308;
+    }
+</style>
+
+<script>
+    function showTab(tabName) {
+        document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.getElementById('section-' + tabName).classList.add('active');
+        document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    function openPermissionModal(userId, username, grantedIds) {
+        document.getElementById('perm_user_id').value = userId;
+        document.getElementById('permModalTitle').innerText = 'Access Permissions: ' + username;
+
+        // Reset checkboxes
+        document.querySelectorAll('#permissionModal input[type="checkbox"]').forEach(cb => cb.checked = false);
+
+        // Check granted ones
+        grantedIds.forEach(id => {
+            let cb = document.getElementById('chk-folder-' + id);
+            if (cb) cb.checked = true;
+        });
+
+        document.getElementById('permissionModal').classList.add('active');
+    }
+
+    function closePermissionModal() {
+        document.getElementById('permissionModal').classList.remove('active');
+    }
+</script>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="form-card">
+    <h2 class="form-title">Create New User</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="email">Email Address (Username)</label>
+            <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Initial Password (Optional)</label>
+            <input type="text" id="password" name="password" class="form-control" placeholder="Auto-generated if blank">
+        </div>
+        <div class="form-group">
+            <label for="role">User Role</label>
+            <select name="role" id="role" class="form-control">
+                <option value="user">Regular User</option>
+                <option value="admin">Admin (Full Access)</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Create User</button>
+        </div>
+        <a href="{{ url_for('admin.dashboard') }}"
+            style="display:block; text-align:center; color:var(--text-secondary); margin-top:1rem;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="explorer-container">
+    <div class="explorer-header">
+        <div class="breadcrumbs">
+            <span>Home Dashboard</span>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stats-card">
+            <div class="stats-icon" style="color: var(--accent);"><i class="fas fa-file-alt"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">Total Files</span>
+                <span class="stats-value">{{ total_files }}</span>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon" style="color: #a78bfa;"><i class="fas fa-video"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">Videos</span>
+                <span class="stats-value">{{ total_videos }}</span>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon" style="color: #f472b6;"><i class="fas fa-image"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">Pictures</span>
+                <span class="stats-value">{{ total_images }}</span>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon" style="color: var(--success);"><i class="fas fa-users"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">Users</span>
+                <span class="stats-value">{{ total_users }}</span>
+            </div>
+        </div>
+        <div class="stats-card">
+            <div class="stats-icon" style="color: #eab308;"><i class="fas fa-user-clock"></i></div>
+            <div class="stats-info">
+                <span class="stats-label">Guests</span>
+                <span class="stats-value">{{ total_guests }}</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Section -->
+    <div class="dashboard-section" style="margin-top: 2rem;">
+        <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-users-cog"></i> User Overview</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Created At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td><span class="role-badge role-{{ user.role }}">{{ user.role|replace('_', ' ')|title }}</span>
+                        </td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Guest Section -->
+    <div class="dashboard-section" style="margin-top: 2rem;">
+        <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-user-clock"></i> Active Guest Access</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Guest Name</th>
+                        <th>Expires At</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for guest in guests %}
+                    <tr class="{% if guest.is_expired %}expired-row{% endif %}">
+                        <td>{{ guest.username }}</td>
+                        <td>{{ guest.guest_expires_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if guest.is_expired %}
+                            <span class="status-badge status-expired">Expired</span>
+                            {% else %}
+                            <span class="status-badge status-active">Active</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stats-card {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1.25rem;
+        transition: transform 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        border-color: var(--accent);
+    }
+
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+
+    .stats-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .stats-label {
+        color: var(--text-secondary);
+        font-size: 0.85rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stats-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+
+    .dashboard-section {
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 2rem;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .data-table th {
+        color: var(--text-secondary);
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .role-badge,
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .role-super_admin {
+        background: rgba(56, 189, 248, 0.2);
+        color: var(--accent);
+    }
+
+    .role-user {
+        background: rgba(34, 197, 94, 0.2);
+        color: var(--success);
+    }
+
+    .role-guest {
+        background: rgba(234, 179, 8, 0.2);
+        color: #eab308;
+    }
+
+    .status-active {
+        background: rgba(34, 197, 94, 0.2);
+        color: var(--success);
+    }
+
+    .status-expired {
+        background: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+    }
+
+    .expired-row {
+        opacity: 0.6;
+    }
+</style>
+{% endblock %}

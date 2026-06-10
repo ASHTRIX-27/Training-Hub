@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard">
+    <div class="header-actions">
+        <h1>Admin Dashboard</h1>
+        <div class="btn-group">
+            <a href="{{ url_for('admin.create_user') }}" class="btn btn-primary"
+                style="width:auto; display:inline-block">Create User</a>
+            <a href="{{ url_for('admin.create_guest') }}" class="btn btn-primary"
+                style="width:auto; display:inline-block">Create Guest</a>
+        </div>
+    </div>
+
+    <!-- Users Section -->
+    <section class="dashboard-section">
+        <h2>Users</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Created At</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.role }}</td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td>
+                            {% if not user.is_super_admin %}
+                            <button onclick="openEnrollModal('{{ user.id }}', '{{ user.username }}')"
+                                class="btn-sm btn-primary">Enroll</button>
+                            <a href="{{ url_for('admin.delete_user', user_id=user.id) }}" class="btn-sm btn-danger"
+                                onclick="return confirm('Delete this user?')">Delete</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Guest Section -->
+    <section class="dashboard-section">
+        <h2>Active Guests</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Expires At</th>
+                        <th>Created By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for guest in guests %}
+                    <tr class="{% if guest.is_expired %}expired-row{% endif %}">
+                        <td>{{ guest.username }}</td>
+                        <td>{{ guest.guest_expires_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>{{ guest.created_by_id }}</td>
+                        <td>
+                            <button onclick="openEnrollModal('{{ guest.id }}', '{{ guest.username }}')"
+                                class="btn-sm btn-primary">Enroll</button>
+                            <a href="{{ url_for('admin.delete_user', user_id=guest.id) }}"
+                                class="btn-sm btn-danger">Revoke</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Audit Log -->
+    <section class="dashboard-section">
+        <h2>Log Book</h2>
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ log.user.username if log.user else 'System/Deleted' }}</td>
+                        <td>{{ log.action }}</td>
+                        <td>{{ log.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- Enrollment Modal -->
+    <div id="enrollModal" class="modal">
+        <div class="modal-content">
+            <h2 id="enrollModalTitle">Enroll User</h2>
+            <form action="{{ url_for('admin.enroll_user') }}" method="POST">
+                <input type="hidden" id="enroll_user_id" name="user_id">
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="folder_id">Select Training Folder</label>
+                    <select name="folder_id" id="folder_id" class="form-control" required>
+                        <option value="">-- Choose a Training --</option>
+                        {% for folder in training_folders %}
+                        <option value="{{ folder.id }}">{{ folder.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="modal-actions"
+                    style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="closeEnrollModal()" class="btn btn-secondary">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Enroll</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEnrollModal(userId, username) {
+        document.getElementById('enroll_user_id').value = userId;
+        document.getElementById('enrollModalTitle').innerText = 'Enroll ' + username;
+        document.getElementById('enrollModal').classList.add('active');
+    }
+    function closeEnrollModal() {
+        document.getElementById('enrollModal').classList.remove('active');
+    }
+</script>
+
+<style>
+    .header-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .dashboard-section {
+        margin-bottom: 3rem;
+        background: var(--bg-panel);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 1rem;
+    }
+
+    .data-table th,
+    .data-table td {
+        padding: 1rem;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .data-table th {
+        color: var(--text-secondary);
+        font-weight: 600;
+    }
+
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 0.85rem;
+        display: inline-block;
+    }
+
+    .btn-danger {
+        background-color: rgba(239, 68, 68, 0.2);
+        color: var(--danger);
+        border: 1px solid var(--danger);
+    }
+
+    .expired-row {
+        opacity: 0.6;
+        text-decoration: line-through;
+    }
+</style>
+{% endblock %}

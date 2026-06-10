@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="explorer-container">
+    <!-- Top Bar -->
+    <div class="explorer-header">
+        <div class="breadcrumbs">
+            {% for crumb in breadcrumbs %}
+            <a href="{{ crumb.url }}">{{ crumb.name }}</a>
+            {% if not loop.last %} <span class="separator">/</span> {% endif %}
+            {% endfor %}
+        </div>
+
+        <div class="search-box">
+            <form action="{{ url_for('main.index') }}" method="GET">
+                <input type="text" name="q" placeholder="Search files..." value="{{ query or '' }}"
+                    class="form-control">
+            </form>
+        </div>
+    </div>
+
+    <!-- Actions Bar -->
+    {% if current_user.is_admin %}
+    <div class="actions-bar">
+        <div class="left-actions">
+            <button onclick="openFolderModal()" class="btn btn-primary" style="width:auto;"><i
+                    class="fas fa-folder-plus"></i> New Folder</button>
+            <form action="{{ url_for('main.upload_file') }}" method="POST" enctype="multipart/form-data"
+                class="upload-form">
+                <input type="hidden" name="folder_id" value="{{ current_folder.id if current_folder else '' }}">
+                <label for="file-upload" class="btn btn-primary" style="width:auto; cursor:pointer;">
+                    <i class="fas fa-file-upload"></i> Upload
+                </label>
+                <input id="file-upload" type="file" name="file" multiple style="display:none;"
+                    onchange="this.form.submit()">
+            </form>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- File Grid -->
+    <div class="file-grid">
+        <!-- Folders -->
+        {% for folder in folders %}
+        <div class="file-item folder-item {% if folder.is_training %}training-folder{% endif %}">
+            <a href="{{ url_for('main.index', folder_id=folder.id) }}" class="main-link"></a>
+            <div class="file-icon">
+                {% if folder.is_training %}
+                <i class="fas fa-graduation-cap"></i>
+                {% else %}
+                <i class="fas fa-folder"></i>
+                {% endif %}
+            </div>
+            <div class="file-name">
+                {{ folder.name }}
+                {% if folder.is_training %}<span class="badge">Training</span>{% endif %}
+            </div>
+            <div class="file-actions">
+                <button onclick="openRenameModal('folder', this.dataset.id, this.dataset.name)"
+                    data-id="{{ folder.id }}" data-name="{{ folder.name }}" class="icon-btn" title="Rename"><i
+                        class="fas fa-edit"></i></button>
+                <button onclick="openDeleteModal('folder', this.dataset.id)" data-id="{{ folder.id }}"
+                    class="icon-btn danger" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Files -->
+        {% for file in files %}
+        <div class="file-item file-type-{{ file.file_type }}">
+            <div class="file-icon">
+                {% if file.file_type == 'image' %}
+                <i class="fas fa-image"></i>
+                {% elif file.file_type == 'video' %}
+                <i class="fas fa-video"></i>
+                {% else %}
+                <i class="fas fa-file-alt"></i>
+                {% endif %}
+            </div>
+            <div class="file-name">
+                {% if file.file_type == 'video' %}
+                <a href="#" class="main-link"
+                    onclick="openVideo(this.dataset.url, this.getAttribute('data-name')); return false;"
+                    data-url="{{ url_for('main.view_file', file_id=file.id) }}" data-name="{{ file.filename }}"></a>
+                {{ file.filename }}
+                {% elif file.file_type == 'image' %}
+                <a href="#" class="main-link"
+                    onclick="openImage(this.dataset.url, this.getAttribute('data-name')); return false;"
+                    data-url="{{ url_for('main.view_file', file_id=file.id) }}" data-name="{{ file.filename }}"></a>
+                {{ file.filename }}
+                {% else %}
+                <a href="{{ url_for('main.view_file', file_id=file.id) }}" class="main-link" target="_blank"></a>
+                {{ file.filename }}
+                {% endif %}
+                {% if file.id in completed_file_ids %}
+                <i class="fas fa-check-circle completed-checkmark" title="Completed"></i>
+                {% endif %}
+            </div>
+            <div class="file-meta">{{ file.size|filesizeformat }}</div>
+            <div class="file-actions">
+                <a href="{{ url_for('main.download_file', file_id=file.id) }}" class="icon-btn" title="Download"><i
+                        class="fas fa-download"></i></a>
+                <button onclick="openRenameModal('file', this.dataset.id, this.dataset.name)" data-id="{{ file.id }}"
+                    data-name="{{ file.filename }}" class="icon-btn" title="Rename"><i class="fas fa-edit"></i></button>
+                <button onclick="openDeleteModal('file', this.dataset.id)" data-id="{{ file.id }}"
+                    class="icon-btn danger" title="Delete"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% if not folders and not files %}
+        <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            <p>This folder is empty.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="folderModal" class="modal">
+    <div class="modal-content">
+        <h3>Create New Folder</h3>
+        <form action="{{ url_for('main.create_folder') }}" method="POST">
+            <input type="hidden" name="parent_id" value="{{ current_folder.id if current_folder else '' }}">
+            <input type="text" name="name" class="form-control" placeholder="Folder Name" required autofocus>
+            <div class="form-group" style="margin-top:1rem;">
+                <label>Folder Type</label>
+                <div style="display:flex; gap:1.5rem; margin-top:0.5rem;">
+                    <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                        <input type="radio" name="is_training" value="false" checked> Normal
+                    </label>
+                    <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; color:var(--accent);">
+                        <input type="radio" name="is_training" value="true"> Training Folder
+                    </label>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModals()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Create</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="renameModal" class="modal">
+    <div class="modal-content">
+        <h3>Rename Item</h3>
+        <form action="{{ url_for('main.rename_item') }}" method="POST">
+            <input type="hidden" id="renameType" name="type">
+            <input type="hidden" id="renameId" name="id">
+            <input type="text" id="renameName" name="name" class="form-control" required>
+            <div class="modal-actions">
+                <button type="button" onclick="closeModals()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3>Delete Item</h3>
+        <p>Are you sure you want to delete this?</p>
+        <form action="{{ url_for('main.delete_item') }}" method="POST">
+            <input type="hidden" id="deleteType" name="type">
+            <input type="hidden" id="deleteId" name="id">
+            <div class="modal-actions">
+                <button type="button" onclick="closeModals()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Video/Image Modals -->
+<div id="videoModal" class="modal">
+    <div class="modal-content modal-lg" style="width: 80%; max-width: 1000px; background: #000;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+            <h3 id="videoTitle" style="color: #fff;">Video</h3>
+            <button onclick="closeModals()" class="icon-btn" style="font-size: 1.5rem; color: #fff;"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <div class="video-container" style="display: flex; justify-content: center;">
+            <video id="videoPlayer" controls style="width:100%; max-height: 80vh; outline: none;">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </div>
+</div>
+
+<div id="imageModal" class="modal">
+    <div class="modal-content modal-lg bg-transparent"
+        style="width: auto; max-width: 90%; background: transparent; border: none; box-shadow: none;">
+        <div class="modal-header" style="position: absolute; top: 20px; right: 20px; z-index: 1001;">
+            <button onclick="closeModals()" class="icon-btn"
+                style="font-size: 2rem; color: #fff; background: rgba(0,0,0,0.5); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;"><i
+                    class="fas fa-times"></i></button>
+        </div>
+        <div class="image-container" style="text-align:center; display: flex; justify-content: center;">
+            <img id="imageViewer" src=""
+                style="max-width:100%; max-height:90vh; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+{% endblock %}

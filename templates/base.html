@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Hub</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+
+<body>
+    <div class="app-container">
+        {% if current_user.is_authenticated %}
+        <nav class="sidebar">
+            <div class="brand">Training Hub</div>
+            <ul class="nav-links">
+                <li><a href="{{ url_for('main.dashboard') }}"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="{{ url_for('main.index') }}"><i class="fas fa-folder"></i> Files</a></li>
+                {% if current_user.is_admin %}
+                <li class="nav-section-title">Admin</li>
+                <li><a href="{{ url_for('admin.dashboard') }}"><i class="fas fa-user-shield"></i> Admin Panel</a></li>
+                <li><a href="{{ url_for('admin.settings') }}"><i class="fas fa-cog"></i> Settings</a></li>
+                {% endif %}
+                <li class="nav-section-title">Account</li>
+                <li><a href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        <main class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="flash-messages">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</body>
+
+</html>
